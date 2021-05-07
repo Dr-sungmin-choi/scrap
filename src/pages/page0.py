@@ -9,14 +9,13 @@ import plotly.express as px
 import pandas as pd
 import numpy as np
 
-app = dash.Dash(__name__, suppress_callback_exceptions=True)
-server = app.server
+from app import app
 
 pd.set_option('display.float_format', lambda x: '%.0f' % x)
 
 df_lcrcy_induty = pd.read_csv('../data/TP_LCRCY_USE_ND_INDUTY_DISTRB.csv')
 df_mwmn = pd.read_csv('../data/TP_MWMN_ACCTO_CNSMP_PTTRN.csv')
-df_postnum = pd.read_table('../data/gg.txt', sep='|')
+df_postnum = pd.read_table('../data/경기도.txt', sep='|')
 df_postnum = df_postnum.drop(['산여부', '지번본번', '지하여부', '건물번호본번', '건물번호부번', '건물관리번호', '다량배달처명', '시군구용건물명', '읍면동일련번호', '지번부번', '법정동명', '구우편번호', '우편번호일련번호', '도로명코드', '도로명', '도로명영문'], axis=1)
 df_postnum = df_postnum.drop_duplicates(['우편번호'], keep='first')
 df_1 = df_lcrcy_induty.groupby('가맹점우편번호').sum().reset_index().drop('분석인덱스', axis=1)
@@ -49,7 +48,7 @@ df_3_mean = df_3_mean.rename(columns={'가맹점업종명': '가맹점업종명'
 df_3_merged = pd.merge(df_3, df_3_mean, on='가맹점업종명', how='left')
 dataset.append(df_3_merged)
 
-app.layout = html.Div([
+layout = html.Div([
     html.Div([
         html.H1('LOCAL CURRENCY USAGE', style={'marginBottom': '0'}),
         html.P('행정동별 가맹점수에 따른 지역화폐 사용량', style={'marginTop': '0'}),
@@ -105,7 +104,10 @@ def update_options(value):
     return result
 
 @app.callback(
+    [
         Output(component_id='page0-output1', component_property='children'),
+        Output(component_id='page0-output2', component_property='children')
+    ],
     [
         Input(component_id='page0-city-dropdown', component_property='value'),
         Input(component_id='page0-dong-dropdown', component_property='value')
@@ -251,7 +253,7 @@ def show_graph3(city):
                 marker_color='lightsalmon'
             ),
         ],
-                'layout':
+        'layout':
             go.Layout(
                 title={
                     'text': '< 타지역 대비 결제금액이 많은 업종 >',
@@ -304,6 +306,3 @@ def show_graph3(city):
             )
     }
     return fig1, fig2
-
-if __name__ == "__main__":
-    app.run_server(port=8080, debug=True)

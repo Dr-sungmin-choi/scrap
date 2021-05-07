@@ -1,24 +1,26 @@
-
-import pandas as pd
 import dash
-import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
 from dash.exceptions import PreventUpdate
+import dash_html_components as html
+import dash_core_components as dcc
+import plotly.graph_objs as go
 import plotly.express as px
-import plotly.graph_objects as go
+import pandas as pd
+import numpy as np
 import json
 
-MAPBOX_API_KEY = 'pk.eyJ1IjoicmxveWh2diIsImEiOiJja244Yjd1aTAwZ25kMnZ0YXF3MGp4cm1zIn0.zd5Pk-iMypa4Xz9BbvztVw'
+from app import app
+
+token = 'pk.eyJ1IjoicmxveWh2diIsImEiOiJja244Yjd1aTAwZ25kMnZ0YXF3MGp4cm1zIn0.zd5Pk-iMypa4Xz9BbvztVw'
 
 df = pd.read_csv('../data/custom_dataset.csv', encoding='utf-8')
 geojson = json.load(open('../data/SIG_202005/custom_geojson.geojson', encoding='utf-8'))
 candidates = ['결제금액', '결제수']
+
 df_summary = df.describe().iloc[[1, 3, 7], :].reset_index().rename(columns={'index': '항목'})
 
-app = dash.Dash(__name__)
-
-app.layout = html.Div([
+layout = html.Div([
     html.H1('지역별 지역화폐 사용현황'),
     html.Div([
         html.Div([
@@ -33,7 +35,7 @@ app.layout = html.Div([
             dcc.Graph(id="choropleth", style={'display': 'None'}),
         ], style={'padding': '1%', 'width': '50%'}),
         html.Div([
-            html.H2('경기도 전체와 비교'),
+            html.H2('경기도 전체와 비교하기'),
             html.Label([
                 '시군구 선택',
                 dcc.Dropdown(
@@ -54,6 +56,8 @@ app.layout = html.Div([
     ], style={'display': 'flex', 'flexFlow': 'row nowrap'}),
 
 ], style={'display': 'flex', 'flexFlow': 'column nowrap', 'padding': '2%', 'border': '1px solid black', 'borderRadius': '5px'})
+
+MAPBOX_API_KEY = 'pk.eyJ1IjoicmxveWh2diIsImEiOiJja244Yjd1aTAwZ25kMnZ0YXF3MGp4cm1zIn0.zd5Pk-iMypa4Xz9BbvztVw'
 
 @app.callback(
     [
@@ -170,6 +174,3 @@ def display_bar(city):
             )
     }
     return fig_sum, {}, fig_cnt, {}
-
-if __name__ == '__main__':
-    app.run_server(debug=True)

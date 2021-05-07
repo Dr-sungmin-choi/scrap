@@ -10,15 +10,13 @@ import pandas as pd
 import numpy as np
 import json
 
+from app import app
+
 df = pd.read_csv('../data/행정_법정동 중심좌표.csv', encoding='utf-8')
 df = df.drop_duplicates(['시군구', '읍면동'], keep='first')
-df_custom = pd.read_csv('../data/custom_dataset_20210417.csv', encoding='utf-8')
-external_scripts = [
-    {'src': '//dapi.kakao.com/v2/maps/sdk.js?appkey=b859f8af7c28ff0bb477f7ee59c23c06'},
-]
-app = dash.Dash(__name__, external_scripts=external_scripts, suppress_callback_exceptions=True)
 
-app.layout = html.Div([
+df_custom = pd.read_csv('../data/custom_dataset_20210417.csv', encoding='utf-8')
+layout = html.Div([
     html.Div([
             html.Label([
                 '시군구',
@@ -146,6 +144,3 @@ def update_store_list(city, dong):
         lon = html.Span(result.iloc[i, 8], className='page2-store-longitude')
         children.append(html.Div([t, lat, lon], className='page2-store'))
     return children
-
-if __name__ == '__main__':
-    app.run_server(debug=True, port=8080)
