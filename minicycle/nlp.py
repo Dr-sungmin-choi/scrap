@@ -39,7 +39,7 @@ NUM_EDGES = 20
 NUM_WORDS = 50
 WEIGHT_THRESHOLD = 2.2
 
-plt.rcParams['figure.figsize'] = (12, 6)
+plt.rcParams['figure.figsize'] = (16, 8)
 plt.rcParams['font.family'] = 'NanumSquare'
 plt.rc('axes', unicode_minus=False)
 
@@ -128,7 +128,6 @@ class TinyProcesser():
         pos = nx.spring_layout(H, k=7*1/np.sqrt(len(H.nodes())))
         nodes = H.nodes()
         node_size = helper.weight_scaler([self.tf_idf_score[node] for node in nodes], 1000, 4000)
-        log.debug(node_size)
         edges = nx.get_edge_attributes(H, 'weight')
         nx.draw_networkx_nodes(H, pos, nodelist=nodes, node_size=node_size, alpha=0.6)
         nx.draw_networkx_labels(H, pos, labels=dict(zip(nodes, nodes)), font_family='NanumSquare', font_color='white', font_size=9, font_weight='bold')
@@ -142,6 +141,9 @@ class TinyProcesser():
         noun_extractor = LRNounExtractor_v2(verbose=True)
         nouns = noun_extractor.train_extract(self.dataset)
         self.candidates = nouns
+        log.info('Extracted candidates')
+        log.info(pformat(sorted(list(self.candidates.items()), key=lambda x: -x[1].frequency)[5:10]))
+        log.info(pformat(list(noun_extractor._compounds_components.items())[2:7]))
         log.info('_________________________________')
 
     def simpleTfIdf(self):
@@ -151,11 +153,12 @@ class TinyProcesser():
         for i, _ in enumerate(self.dataset):
             f_dataset.append(helper.filter_text(self.dataset[i], c))
         total_words = sum([len(text.split()) for text in f_dataset])
-        total_text = '\n'.join(f_dataset)
         total_num_text = len(f_dataset)
         for each_c in c:
-            cnt = len(total_text.split(each_c)) - 1
-            self.tf_score[each_c] = self.tf_score.get(each_c, 0) + cnt
+            for i, _ in enumerate(self.dataset):
+                cnt = len(self.dataset[i].split(each_c)) - 1
+                num_words = len(self.dataset[i].split()) - 1
+                self.tf_score[each_c] = self.tf_score.get(each_c, 0) + cnt / num_words
             self.idf_score[each_c] = sum([ 1 if each_c in dataset else 0 for dataset in f_dataset])
         self.tf_score.update([[candidate, tf/total_words] for candidate, tf in self.tf_score.items()])
         self.idf_score.update([[candidate, math.log(total_num_text / idf)] for candidate, idf in self.idf_score.items()])
@@ -192,19 +195,23 @@ class TinyProcesser():
         c = [k for k, _ in sorted(list(self.tf_idf_score.items()), key=lambda x: -x[1])][:num_nodes]
         vocab2idx = {vocab:idx for idx, vocab in enumerate(idx2vocab)}
         for i in range(len(c)):
-            query = vocab2idx[c[i]]
-            submatrix = pmi_dok[query,:].tocsr()
-            contexts = submatrix.nonzero()[1]
-            pmi_i = submatrix.data
-        
-            most_relateds = [(idx, pmi_ij) for idx, pmi_ij in zip(contexts, pmi_i)]
-            most_relateds = sorted(most_relateds, key=lambda x: -x[1])
-            most_relateds = [(idx2vocab[idx], pmi_ij) for idx, pmi_ij in most_relateds][:num_edges]
-            for j in range(len(most_relateds)):
-                node, weight = most_relateds[j]
-                if c[i] == node or self.graph.has_edge(c[i], node):
-                    continue
-                self.graph.add_edge(c[i], node, weight=weight)
+            try:
+                query = vocab2idx[c[i]]
+                submatrix = pmi_dok[query,:].tocsr()
+                contexts = submatrix.nonzero()[1]
+                pmi_i = submatrix.data
+            
+                most_relateds = [(idx, pmi_ij) for idx, pmi_ij in zip(contexts, pmi_i)]
+                most_relateds = sorted(most_relateds, key=lambda x: -x[1])
+                most_relateds = [(idx2vocab[idx], pmi_ij) for idx, pmi_ij in most_relateds][:num_edges]
+                for j in range(len(most_relateds)):
+                    node, weight = most_relateds[j]
+                    if c[i] == node or self.graph.has_edge(c[i], node):
+                        continue
+                    self.graph.add_edge(c[i], node, weight=weight)
+            except Exception as e:
+                log.exception(e)
+                continue
         sample_node = sorted(list(self.tf_idf_score.items()), key=lambda x: -x[1])[0][0]
         log.debug(self.graph.edges(sample_node, data=True))
         log.info('_________________________________')
