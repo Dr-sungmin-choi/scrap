@@ -130,7 +130,7 @@ class TinyProcesser():
         node_size = helper.weight_scaler([self.tf_idf_score[node] for node in nodes], 1000, 4000)
         edges = nx.get_edge_attributes(H, 'weight')
         nx.draw_networkx_nodes(H, pos, nodelist=nodes, node_size=node_size, alpha=0.6)
-        nx.draw_networkx_labels(H, pos, labels=dict(zip(nodes, nodes)), font_family='NanumSquare', font_color='white', font_size=9, font_weight='bold')
+        nx.draw_networkx_labels(H, pos, labels=dict(zip(nodes, nodes)), font_family='NanumSquare', font_color='black', font_size=12, font_weight='bold')
         nx.draw_networkx_edges(H, pos, edgelist=edges.keys(), alpha=0.3, width=[x/WEIGHT_THRESHOLD for x in list(edges.values())])
         plt.box(False)
         plt.savefig(f'output/fig/{filename}_graph.png')

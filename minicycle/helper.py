@@ -19,8 +19,8 @@ GOOGLE_DOMAIN = (
     'https://maps.google.'
 )
 USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'
-NEWS_STOPWORDS = ['무단전재', '배포금지', '무단 전재', '배포 금지']
-USER_STOPWORDS = ['지난', '올해']
+NEWS_STOPWORDS = ['무단전재', '배포금지', '무단 전재', '배포 금지', '기사']
+USER_STOPWORDS = []
 
 def remove_google_domain(raws):
     links = list()
