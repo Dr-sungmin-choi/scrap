@@ -28,7 +28,7 @@ def get_argument():
     parser.add_argument('--limit', type=int, default=10000, help='The number of sources to scrap. Default is 1.')
     parser.add_argument('--input_path', type=str, help='Path of the file which contains source text')
     parser.add_argument('--mode', type=str, default='total', help='Total, process, or scrap')
-    parser.add_argument('--period', type=str, default=None, help='Analysis period. y, 6m')
+    parser.add_argument('--period', type=str, default=None, help='Analysis period.') ## TODO
     args = parser.parse_args()
     return args
 
