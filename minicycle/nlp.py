@@ -1,25 +1,24 @@
-import logging
-from pickle import NONE
-from nltk import RegexpParser
 from collections import defaultdict
 from tqdm import tqdm
 from wordcloud import WordCloud
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import networkx as nx
 from pyvis.network import Network
-import kss
 from soynlp.noun import LRNounExtractor_v2
 from soynlp.vectorizer import sent_to_word_contexts_matrix
 from soynlp.word import pmi
 from networkx.readwrite import json_graph
 from pprint import pformat
+from spacy.lang.en.stop_words import STOP_WORDS
+
+import logging
+import kss
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import networkx as nx
 import math
 import json
 import helper
 import spacy
-from spacy.lang.en.stop_words import STOP_WORDS
 import warnings
 import sys
 
@@ -31,23 +30,12 @@ log.setLevel(logging.DEBUG)
 stream_handler = logging.StreamHandler()
 log.addHandler(stream_handler)
 
-### GLOBAL VARIABLES
-MIN_TOKEN = 1
-MAX_TOKEN = 3
-GRAMMAR = r'''
-            NP: {<Noun|Alpha|Number|Suffix>*}
-                # {<NNG|NNP|NR|NP|SL>*<NNB>?}
-                {<NNG|NNP|NR|NP|SL>+<NNG|NNP|NR|NP|SL|SN>*}
-            VP: {<V.*>*}
-            AP: {<A.*>*}
-        '''
-CHUNKER = RegexpParser(GRAMMAR)
+### GLOBAL VARIABLES (HYPERPARAMETERS)
 NUM_NODES = 50
 NUM_EDGES = 20
-NUM_WORDS = 50
-WEIGHT_THRESHOLD = 2.2
+NUM_WORDS = 100
+WEIGHT_THRESHOLD = 1.5
 NLP_EN = spacy.load('en_core_web_sm')
-LTOKENIZER = None
 EXCLUDE_LABELS = set(['DATE', 'TIME', 'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL'])
 
 plt.rcParams['figure.figsize'] = (16, 8)
@@ -55,7 +43,9 @@ plt.rcParams['font.family'] = 'NanumSquare'
 plt.rc('axes', unicode_minus=False)
 
 class TinyProcesser():
-    
+    '''
+    Processer model
+    '''
     def __init__(self, **kwargs):
         self.dataset = kwargs.get('dataset', dict())
         self.langset = kwargs.get('langset', 0)
@@ -69,7 +59,7 @@ class TinyProcesser():
     def save(self, filename):
         df = pd.DataFrame(list(self.tf_idf_score.items()), columns = ['word', 'score'])
         df.to_csv(f'output/score/{filename}_score.txt', sep='\t', encoding='utf-8', index=False)
-        top_keys = [k for k,_ in sorted(self.tf_idf_score.items(), key=lambda item: -item[1])][:NUM_WORDS*2]
+        top_keys = [k for k,_ in sorted(self.tf_idf_score.items(), key=lambda item: -item[1])][:NUM_WORDS]
         wc = WordCloud(
             font_path='C:/Users/komsco/AppData/Local/Microsoft/Windows/Fonts/NanumSquareEB.ttf',
             background_color='white',
@@ -81,15 +71,13 @@ class TinyProcesser():
         plt.savefig(f'output/fig/{filename}_fig.png')
 
         for key, graph in self.graph.items():
-            plt.figure()
             g_json = json_graph.node_link_data(self.graph[key])
             json.dump(g_json, open(f'output/score/{filename}_graph_{key}.json', 'w'), indent=2)
-
+            nx.write_gexf(self.graph[key], f'output/score/{filename}_graph_{key}.gexf')
+            plt.figure()
             G = nx.Graph()        
-            selected_edges = [(u, v, attrs) for u, v, attrs in self.graph[key].edges(data=True) if u in top_keys[:int(NUM_WORDS*0.2)] and attrs['weight'] > WEIGHT_THRESHOLD]
+            selected_edges = [(u, v, attrs) for u, v, attrs in self.graph[key].edges(data=True) if u in top_keys[:int(NUM_WORDS*0.1)] and attrs['weight'] > WEIGHT_THRESHOLD]
             G.add_edges_from(selected_edges)
-            for _, _, d in G.edges(data=True):
-                d['weight'] = round(d['weight'], 3)
             pos = nx.spring_layout(G, k=7*1/np.sqrt(len(G.nodes())))
             nodes = G.nodes()
             node_size = helper.weight_scaler([self.tf_idf_score[node] for node in nodes], 1000, 4000)
@@ -205,21 +193,24 @@ class TinyProcesser():
         for key, docs in list(self.dataset.items()):
             corpus = [sent for sublist in docs for sent in sublist]
             corpus = [helper.filter_text(sent, self.candidates) for sent in corpus]
-
-            x, idx2vocab_elem = sent_to_word_contexts_matrix(
-                corpus,
-                windows=5,
-                min_tf=10,
-                dynamic_weight=False,
-                verbose=True
-            )
-            pmi_dok_elem, px, py = pmi(
-                x,
-                min_pmi=0,
-                alpha=0.0001
-            )
-            idx2vocab[key] = idx2vocab_elem
-            pmi_dok[key] = pmi_dok_elem
+            try:
+                x, idx2vocab_elem = sent_to_word_contexts_matrix(
+                    corpus,
+                    windows=5,
+                    min_tf=10,
+                    dynamic_weight=False,
+                    verbose=True
+                )
+                pmi_dok_elem, px, py = pmi(
+                    x,
+                    min_pmi=0,
+                    alpha=0.0001
+                )
+                idx2vocab[key] = idx2vocab_elem
+                pmi_dok[key] = pmi_dok_elem
+            except:
+                log.info('_________________________________')
+                return idx2vocab, pmi_dok
         log.info('_________________________________')
         return idx2vocab, pmi_dok
 

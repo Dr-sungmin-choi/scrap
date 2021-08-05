@@ -3,12 +3,10 @@ from tqdm import tqdm
 from collections import defaultdict
 from nlp import TinyProcesser
 from news import News
-from pprint import pformat
 
 import pandas as pd
 import os.path as osp
 import sys
-import platform
 import helper
 import logging
 import logging.handlers
@@ -31,13 +29,13 @@ class SimpleWorker:
     Worker class
     '''
     def __init__(self, **kwargs):
-        self.params = kwargs
         self.keyword = kwargs.get('keyword', None)
         self.start_date = datetime.strptime(kwargs.get('start_date'), '%Y%m%d').date()
         self.end_date = datetime.strptime(kwargs.get('end_date'), '%Y%m%d').date()
         self.limit = kwargs.get('limit')
         self.input_path = kwargs.get('input_path', None)
         self.mode = kwargs.get('mode', 'total')
+        self.params = kwargs
     
     def summarize(self):
         log.info('_________________________________')
@@ -49,14 +47,6 @@ class SimpleWorker:
             log.info('Target Keywords:\t{}'.format(self.keyword))
             log.info('Query Date Range:\t{} ~ {}'.format(self.start_date, self.end_date))
             log.info('Query Page Limit:\t{}'.format(self.limit))
-        if platform.system() == 'Windows':
-            log.info('Detected OS: \tWindows')
-        elif platform.system() == 'Linux':
-            log.info('Detected OS: \tMac')
-        elif platform.system() == 'Darwin':
-            log.info('Detected OS: \tMac')
-        else:
-            raise OSError('Unknown OS Type')
         log.info('_________________________________')
 
     def make_urls(self):
@@ -126,6 +116,9 @@ class Loader:
         self.input_file = osp.abspath(input_file)
     
     def load(self):
+        '''
+        Load a file
+        '''
         if self.input_file is None or not osp.exists(self.input_file):
             raise FileNotFoundError("Input file should be placed at {}".format(self.input_file))
         else:
@@ -149,6 +142,9 @@ class Scraper:
         self.outputs = list()
 
     def load(self):
+        '''
+        Scrap news
+        '''
         links = list()
         for url in tqdm(self.targets):
             response = helper.get_sources(url)
@@ -162,6 +158,9 @@ class Scraper:
         self.outputs = [News(url=link, keyword=self.keyword) for link in links]
 
     def call(self):
+        '''
+        Parse news
+        '''
         # process_map(News.parse, self.outputs, max_workers=NUM_PROCESSOR)
         for i in tqdm(range(len(self.outputs))):
             self.outputs[i].parse()
@@ -185,6 +184,8 @@ class Scraper:
         })
         df['pub_date'] = pd.to_datetime(df['pub_date'], utc=True)
         df['pub_date'] = df['pub_date'].apply(lambda x: x.date())
+        log.debug(type(self.params['start_date']))
+        
         start_date = datetime.strptime(self.params['start_date'], '%Y%m%d').date()
         end_date = datetime.strptime(self.params['end_date'], '%Y%m%d').date()
         df = df.loc[(df['pub_date'] >= start_date) & (df['pub_date'] <= end_date), :]

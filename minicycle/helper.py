@@ -19,7 +19,7 @@ GOOGLE_DOMAIN = (
     'https://maps.google.'
 )
 USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'
-NEWS_STOPWORDS = ['news', 'commas', 'type address', 'your email', 'image', '무단전재', '배포금지', '무단 전재', '배포 금지', '기사']
+NEWS_STOPWORDS = ['무단전재', '배포금지', '무단 전재', '배포 금지']
 USER_STOPWORDS = []
 
 def remove_google_domain(raws):
@@ -44,7 +44,6 @@ def get_sources(url):
 def remove_special_char(text):
     text = re.sub("\S+@\S+", " ", text)
     text = re.sub("http\S+", " ", text)
-    text = re.sub("[.,]", " ", text)
     text = re.sub("[\(\[].*?[\)\]]", "", text)
     text = re.sub("[^A-Za-z가-힣0-9'`]", " ", text)
     text = re.sub(r"\s+", " ", text.lower())
