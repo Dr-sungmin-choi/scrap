@@ -30,7 +30,7 @@ log.setLevel(logging.DEBUG)
 stream_handler = logging.StreamHandler()
 log.addHandler(stream_handler)
 
-### GLOBAL VARIABLES (HYPERPARAMETERS)
+### GLOBAL VARIABLES
 NUM_NODES = 50
 NUM_EDGES = 20
 NUM_WORDS = 100
@@ -48,7 +48,6 @@ class TinyProcesser():
     '''
     def __init__(self, **kwargs):
         self.dataset = kwargs.get('dataset', dict())
-        self.langset = kwargs.get('langset', 0)
         self.params = kwargs.get('params', dict())
         self.candidates = list()
         self.tf_score = defaultdict(float)
@@ -73,7 +72,6 @@ class TinyProcesser():
         for key, graph in self.graph.items():
             g_json = json_graph.node_link_data(self.graph[key])
             json.dump(g_json, open(f'output/score/{filename}_graph_{key}.json', 'w'), indent=2)
-            nx.write_gexf(self.graph[key], f'output/score/{filename}_graph_{key}.gexf')
             plt.figure()
             G = nx.Graph()        
             selected_edges = [(u, v, attrs) for u, v, attrs in self.graph[key].edges(data=True) if u in top_keys[:int(NUM_WORDS*0.1)] and attrs['weight'] > WEIGHT_THRESHOLD]
@@ -125,8 +123,7 @@ class TinyProcesser():
                 nouns = nouns | set(noun_extractor.train_extract(sents))
             elif key == 'en':
                 sents = [sent for sublist in docs for sent in sublist]
-                for i in tqdm(range(len(sents))):
-                    sent = sents[i]
+                for _, sent in enumerate(tqdm(sents)):
                     doc = NLP_EN(sent)
                     nouns = nouns | set([ent.text for ent in doc.ents if ent.label_ not in EXCLUDE_LABELS])
                     nouns = nouns | set([chunk.text for chunk in doc.noun_chunks])
@@ -139,7 +136,6 @@ class TinyProcesser():
 
     def filter_candidates(self):
         log.info('Filtering candidates...')
-        stopwords = list()
         filtered_candidates = set()
         with open('stopwords-ko.txt', 'r') as f:
             stopwords = f.readlines()
@@ -151,7 +147,7 @@ class TinyProcesser():
             if helper.is_english(key):
                 if len(key) < 3 or any(len(word) < 2 for word in key.split()):
                     continue
-                if key in STOP_WORDS or any(word in key for word in STOP_WORDS):
+                if key in STOP_WORDS:
                     continue
             if len(key.split()) > 4 or helper.valid_characters(key) <= 0.5:
                 continue
@@ -166,10 +162,9 @@ class TinyProcesser():
 
     def tfidf(self):
         log.info('Ranking candidates...')
-        for i in tqdm(range(len(self.candidates))):
-            candidate = self.candidates[i]
+        for i, candidate in enumerate(tqdm(self.candidates)):
             idf_score = 0
-            for key, docs in list(self.dataset.items()):
+            for _, docs in self.dataset.items():
                 for doc in docs:
                     total_words = sum([len(sent.split()) for sent in doc])
                     cnt = sum([len(sent.split(candidate)) - 1 for sent in doc])
@@ -190,7 +185,7 @@ class TinyProcesser():
         corpus = list()
         idx2vocab = defaultdict(list)
         pmi_dok = defaultdict(list)
-        for key, docs in list(self.dataset.items()):
+        for key, docs in self.dataset.items():
             corpus = [sent for sublist in docs for sent in sublist]
             corpus = [helper.filter_text(sent, self.candidates) for sent in corpus]
             try:
@@ -218,7 +213,7 @@ class TinyProcesser():
         idx2vocab, pmi_dok = self.pmi()
         log.info('Making a graph...')
         c = [k for k, _ in sorted(list(self.tf_idf_score.items()), key=lambda x: -x[1])][:num_nodes]
-        for key, value in list(idx2vocab.items()):
+        for key, value in idx2vocab.items():
             self.graph[key] = nx.Graph()
             vocab2idx = {vocab:idx for idx, vocab in enumerate(value)}
             for i in range(len(c)):

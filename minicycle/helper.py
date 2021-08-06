@@ -1,14 +1,14 @@
-import requests
 from requests_html import HTMLSession
 import re
 import logging
 
+### LOG SETTING
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 stream_handler = logging.StreamHandler()
 log.addHandler(stream_handler)
-### helper function
 
+### GLOBAL VARIABLES
 GOOGLE_DOMAIN = (
     'https://www.google.', 
     'https://google.', 
@@ -23,6 +23,9 @@ NEWS_STOPWORDS = ['무단전재', '배포금지', '무단 전재', '배포 금�
 USER_STOPWORDS = []
 
 def remove_google_domain(raws):
+    '''
+    Remove google domain urls to detect no search result
+    '''
     links = list()
     for url in raws:
         if url.startswith(GOOGLE_DOMAIN):
@@ -32,16 +35,20 @@ def remove_google_domain(raws):
     return links
 
 def get_sources(url):
-        try:
-            session = HTMLSession()
-            response = session.get(url, verify=False)
-            return response
-        except requests.exceptions.RequestException as e:
-            log.exception(e)
-        except requests.exceptions.ConnectionError as e:
-            log.exception(e)
+    '''
+    Make HTML requests
+    '''
+    try:
+        session = HTMLSession()
+        response = session.get(url, verify=False)
+        return response
+    except Exception as e:
+        log.exception(e)
 
 def remove_special_char(text):
+    '''
+    Preprocess text
+    '''
     text = re.sub("\S+@\S+", " ", text)
     text = re.sub("http\S+", " ", text)
     text = re.sub("[\(\[].*?[\)\]]", "", text)
@@ -54,6 +61,9 @@ def valid_characters(text):
     return len(valid_characters) / float(len(text))
 
 def filter_text(text, candidates):
+    '''
+    Make text only containing candidates
+    '''
     output = list()
     tokens = text.split()
     for i, token in enumerate(tokens):
@@ -84,22 +94,11 @@ def is_korean(text):
 def is_english(text):
     text = ''.join(text.split())
     return text.isalnum()
-    
-def find_raw_text(sentence, words):
-    if len(words) == 1:
-        return words[0]
-    raw_text = words[0]
-    tmp = words[0]
-    for i in range(1, len(words)):
-        tmp += words[i]
-        if sentence.find(tmp) == -1:
-            raw_text = raw_text + ' ' + words[i]
-            tmp = raw_text
-        else:
-            raw_text = tmp
-    return raw_text
 
 def weight_scaler(weights, min_value, max_value):
+    '''
+    Rescale
+    '''
     try:
         min_weight = min(weights)
         max_weight = max(weights)
