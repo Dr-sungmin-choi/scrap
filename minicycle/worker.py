@@ -184,7 +184,6 @@ class Scraper:
         })
         df['pub_date'] = pd.to_datetime(df['pub_date'], utc=True)
         df['pub_date'] = df['pub_date'].apply(lambda x: x.date())
-        log.debug(type(self.params['start_date']))
         
         start_date = datetime.strptime(self.params['start_date'], '%Y%m%d').date()
         end_date = datetime.strptime(self.params['end_date'], '%Y%m%d').date()
