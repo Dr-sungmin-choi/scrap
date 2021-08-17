@@ -31,13 +31,13 @@ sidebar = html.Div(
         html.H2("지역화폐", className="display-4"),
         html.Hr(),
         html.P(
-            "경기도 지역화폐 공공데이터 시각화", className="lead"
+            "이용 현황 모니터링 시스템", className="lead"
         ),
         dbc.Nav(
             [
-                dbc.NavLink("Overview", href="/", active="exact"),
-                dbc.NavLink("City", href="/page-1", active="exact"),
-                dbc.NavLink("Kakao Map", href="/page-2", active="exact"),
+                dbc.NavLink("개요", href="/", active="exact"),
+                dbc.NavLink("지역", href="/page-1", active="exact"),
+                dbc.NavLink("카카오맵", href="/page-2", active="exact"),
             ],
             vertical=True,
             pills=True,

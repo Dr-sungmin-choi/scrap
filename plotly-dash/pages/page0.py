@@ -8,14 +8,18 @@ import plotly.graph_objs as go
 import plotly.express as px
 import pandas as pd
 import numpy as np
+import os.path as osp
 
 from app import app
 
 pd.set_option('display.float_format', lambda x: '%.0f' % x)
 
-df_lcrcy_induty = pd.read_csv('../data/TP_LCRCY_USE_ND_INDUTY_DISTRB.csv')
-df_mwmn = pd.read_csv('../data/TP_MWMN_ACCTO_CNSMP_PTTRN.csv')
-df_postnum = pd.read_table('../data/경기도.txt', sep='|')
+DATA_DIR = '/Users/eun-yunhye/Developer/scrap/plotly-dash/data'
+df_lcrcy_induty = pd.read_csv(osp.join(DATA_DIR, 'TP_LCRCY_USE_ND_INDUTY_DISTRB.csv'))
+df_mwmn = pd.read_csv(osp.join(DATA_DIR, 'TP_MWMN_ACCTO_CNSMP_PTTRN.csv'))
+df_postnum = pd.read_table(osp.join(DATA_DIR, '경기도.txt'), sep='|')
+
+# df_postnum = df_postnum.loc[:, ['우편번호', '시도', '시도영문','시군구', '시군구영문', '읍면', '읍면영문', '리명', '행정동명']]
 df_postnum = df_postnum.drop(['산여부', '지번본번', '지하여부', '건물번호본번', '건물번호부번', '건물관리번호', '다량배달처명', '시군구용건물명', '읍면동일련번호', '지번부번', '법정동명', '구우편번호', '우편번호일련번호', '도로명코드', '도로명', '도로명영문'], axis=1)
 df_postnum = df_postnum.drop_duplicates(['우편번호'], keep='first')
 df_1 = df_lcrcy_induty.groupby('가맹점우편번호').sum().reset_index().drop('분석인덱스', axis=1)

@@ -1,7 +1,11 @@
 let latitudeValue = 33.450701;
 let longitudeValue = 126.570667;
 let map;
-let infoValues = []
+let infoValues = [];
+let imageSrc = "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png"; 
+let imageSize = new kakao.maps.Size(24, 35); 
+let markerImage = new kakao.maps.MarkerImage(imageSrc, imageSize); 
+let overlayArray = [];
 
 function handleMapContainer(mapContainer) {
     mapOption = { 
@@ -24,76 +28,88 @@ waitMapAvailable();
 function setCenter(map, latitude, longitude) {
     let moveLatLon = new kakao.maps.LatLng(latitude, longitude);  
     map.setCenter(moveLatLon)    
-}    
-
-function waitCenterChangeAvailable(latitude, longitude) {
-    if (map == undefined) {
-        window.setTimeout(waitMapChangeAvailable, 500);
-        return;
-    }
-    return setCenter(map, latitude, longitude)
 }
 
-let centerObserver = new MutationObserver((mutations, me) => {
-    mutations.forEach((mutation) =>  {
-        if (longitudeValue != mutation.target.innerText & mutation.target.innerText != undefined) {
-            longitudeValue = mutation.target.innerText;
-            latitudeValue = document.getElementById('page2-latitude').innerText;
-            waitCenterChangeAvailable(parseFloat(latitudeValue), parseFloat(longitudeValue));
-            // console.log(longitudeValue)
-            // console.log(latitudeValue)
-        }
+function displayMarker(map, data) { 
+    let marker = new kakao.maps.Marker({
+        map: map,
+        position: data.latlng,
+        title : data.title,
+        image : markerImage
+    });
+    var overlay = new kakao.maps.CustomOverlay({
+        position: marker.getPosition()
+    });
+    
+    var content = document.createElement('div');
+    content.classList.add('wrap')
+    var infoDiv = document.createElement('div')
+    infoDiv.classList.add('info')
+    var titleDiv = document.createElement('div')
+    titleDiv.classList.add('title')
+    titleDiv.innerText = data.title
+    infoDiv.appendChild(titleDiv)
+    var bodyDiv = document.createElement('div')
+    bodyDiv.classList.add('body')
+    var descDiv = document.createElement('div')
+    descDiv.classList.add('desc')
+    var adDiv = document.createElement('div')
+    adDiv.classList.add('ellipsis')
+    adDiv.innerText = data.adroad
+    var categoryDiv = document.createElement('div')
+    categoryDiv.classList.add('ellipsis')
+    categoryDiv.innerText = data.bigcategory + ' > ' + data.category
+    descDiv.appendChild(categoryDiv)
+    descDiv.appendChild(adDiv)
+    bodyDiv.appendChild(descDiv)
+    infoDiv.appendChild(bodyDiv)
+    content.appendChild(infoDiv)
+    overlay.setContent(content);
+    overlayArray.push(overlay)
+    kakao.maps.event.addListener(marker, 'mouseover', function() {
+        overlay.setMap(map);
+    });
+    kakao.maps.event.addListener(marker, 'mouseout', function() {
+        overlay.setMap(null);
     })
-});
-
-function waitCenterObserverAvailable() {
-    let longitudeContainer = document.getElementById('page2-longitude')
-    if(!longitudeContainer) {
-        //The node we need does not exist yet.
-        //Wait 500ms and try again
-        window.setTimeout(waitCenterObserverAvailable,500);
-        return;
-    }
-    let config = {
-        characterData: true,
-        attributes: true,
-        childList: false,
-        subtree: true
-    };
-    centerObserver.observe(longitudeContainer,config);
 }
-waitCenterObserverAvailable();
+
+function median(data) {
+    data = data.sort((a, b) => a - b)
+    n = Math.floor(data.length / 2)
+    return (data[n] + data[data.length - 1 - n]) / 2 }
 
 let infoObserver = new MutationObserver((mutations, me) => {
     mutations.forEach((mutation) =>  {
         if (infoValues.length != mutation.target.childNodes.length) {
             infoValues = mutation.target.childNodes;
             let positions = [];
-
+            let latArray = [];
+            let lonArray = [];
+            overlayArray = [];
             for (let i=0;i<infoValues.length;i++) {
                 let t = infoValues[i].childNodes[0].innerText
                 let lat = parseFloat(infoValues[i].childNodes[1].innerText)
                 let lon = parseFloat(infoValues[i].childNodes[2].innerText)
-                positions.push({ title: t, latlng: new kakao.maps.LatLng(lat, lon) })
-            }  
+                let adroad = infoValues[i].childNodes[3].innerText
+                let bigcategory = infoValues[i].childNodes[4].innerText
+                let category = infoValues[i].childNodes[5].innerText
+                latArray.push(lat);
+                lonArray.push(lon);
+                positions.push({
+                    title: t,
+                    latlng: new kakao.maps.LatLng(lat, lon),
+                    adroad: adroad,
+                    bigcategory: bigcategory,
+                    category: category
+                })
+            }
+            setCenter(map, median(latArray), median(lonArray)) 
             
-            let imageSrc = "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png"; 
-    
             for (let i=0; i<positions.length; i++) {
-                
-                // 마커 이미지의 이미지 크기 입니다
-                let imageSize = new kakao.maps.Size(24, 35); 
-                
-                // 마커 이미지를 생성합니다    
-                let markerImage = new kakao.maps.MarkerImage(imageSrc, imageSize); 
-                
-                // 마커를 생성합니다
-                let marker = new kakao.maps.Marker({
-                    map: map, // 마커를 표시할 지도
-                    position: positions[i].latlng, // 마커를 표시할 위치
-                    title : positions[i].title, // 마커의 타이틀, 마커에 마우스를 올리면 타이틀이 표시됩니다
-                    image : markerImage // 마커 이미지 
-                });
+                let data = positions[i]
+                console.log(data)
+                displayMarker(map, data)
             }
         }
     })

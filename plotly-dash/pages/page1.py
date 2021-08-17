@@ -9,13 +9,16 @@ import plotly.express as px
 import pandas as pd
 import numpy as np
 import json
+import os.path as osp
 
 from app import app
 
 token = 'pk.eyJ1IjoicmxveWh2diIsImEiOiJja244Yjd1aTAwZ25kMnZ0YXF3MGp4cm1zIn0.zd5Pk-iMypa4Xz9BbvztVw'
+DATA_DIR = '/Users/eun-yunhye/Developer/scrap/plotly-dash/data'
 
-df = pd.read_csv('../data/custom_dataset.csv', encoding='utf-8')
-geojson = json.load(open('../data/SIG_202005/custom_geojson.geojson', encoding='utf-8'))
+df = pd.read_csv(osp.join(DATA_DIR, 'custom_dataset.csv'), encoding='utf-8')
+df_custom = pd.read_csv(osp.join(DATA_DIR, 'custom_dataset_20210417.csv'), encoding='utf-8')
+geojson = json.load(open(osp.join(DATA_DIR, 'SIG_202005/custom_geojson.geojson'), encoding='utf-8'))
 candidates = ['결제금액', '결제수']
 
 df_summary = df.describe().iloc[[1, 3, 7], :].reset_index().rename(columns={'index': '항목'})
@@ -45,13 +48,14 @@ layout = html.Div([
             ]),
             html.H3(id='output1'),
             html.Div([
+                dcc.Graph(id='page1-graph-category', style={'display': 'None'}),
                 html.Div(
                     dcc.Graph(id="bar_sum", style={'display': 'None'}), style={'width': '50%'}
                 ),
                 html.Div(
                     dcc.Graph(id="bar_cnt", style={'display': 'None'}), style={'width': '50%'}
                 )
-            ], style={'display': 'flex', 'flexFlow': 'row nowrap', 'width': '100%'})
+            ], style={'display': 'flex', 'flexFlow': 'row wrap', 'width': '100%'})
         ], style={'padding': '1%', 'width':  '50%', 'display': 'flex', 'flexFlow': 'column nowrap'})
     ], style={'display': 'flex', 'flexFlow': 'row nowrap'}),
 
@@ -75,6 +79,7 @@ def display_choropleth(candidate):
         locations="시군구명",
         featureidkey='properties.SIG_KOR_NM',
         center={'lat': center[0], 'lon': center[1]},
+        opacity=0.5,
         zoom=7,
     )
 
@@ -99,6 +104,28 @@ def display_output(city):
 
 @app.callback(
     [
+        Output(component_id="page1-graph-category", component_property="figure"), 
+        Output(component_id='page1-graph-category', component_property='style')
+    ],
+    [
+        Input(component_id='city-dropdown', component_property='value'),
+    ]
+)
+
+def make_pie_chart(city):
+    if not city:
+        raise PreventUpdate
+    sample = df_custom.loc[df_custom['city'] == city].groupby('big_category').count().reset_index()
+    fig = px.pie(sample, values='name', names='big_category')
+    fig.update_layout(
+        font=dict(
+            size=24,
+        )
+    )
+    return fig, {}
+
+@app.callback(
+    [
         Output(component_id='bar_sum', component_property='figure'),
         Output(component_id='bar_sum', component_property='style'),
         Output(component_id='bar_cnt', component_property='figure'),
@@ -112,8 +139,8 @@ def display_bar(city):
         raise PreventUpdate
 
     selected = df.loc[df['시군구명']==city, ['결제금액', '결제수']]
-    selected['항목'] = 'selected'
     selected = pd.concat([selected, df_summary])
+    selected['항목'] = [city, '평균', '최소', '최대']
 
     tmp = []
     for i in range(len(selected)):
